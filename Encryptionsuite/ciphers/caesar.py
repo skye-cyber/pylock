@@ -1,4 +1,4 @@
-from ..interfaces import Ciphers
+from ..core.interfaces import Ciphers
 
 
 class Caesar(Ciphers):

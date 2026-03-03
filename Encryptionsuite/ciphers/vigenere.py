@@ -1,5 +1,5 @@
-from ..interfaces import Ciphers
-from ...utils.decorators import decorators
+from ..core.interfaces import Ciphers
+from ..utils.decorators import decorators
 
 
 class Vigenere(Ciphers):
