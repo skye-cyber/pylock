@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-class SuiteInterface:
+class PyLockInterface:
     """Suite interface"""
 
     @property

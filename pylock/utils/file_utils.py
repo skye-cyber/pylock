@@ -8,23 +8,25 @@ import shutil
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Iterator, List, Optional, Union
+from typing import Iterator, List, Optional, Union, Tuple
 from tqdm.auto import tqdm
 from ..core.exceptions import FileSystemError
 from .colors import OutputFormater as OF
 from .logging import simplelogger as logger
 
 
-def dirbuster(_dir_):
+def dirbuster(dir: str, suffixes: Union[List, Tuple]) -> list:
     try:
         target = []
-        for root, dirs, files in os.walk(_dir_):
+        for root, dirs, files in os.walk(dir):
             for file in files:
                 ext = file.split(".")[-1]
 
-                _path_ = os.path.join(root, file)
-                if os.path.exists(_path_) and ext.lower() in ("pdf", "doc", "docx"):
-                    target.append(_path_)
+                path = os.path.join(root, file)
+                if os.path.exists(path) and (
+                    ext.lower() in suffixes if suffixes else True
+                ):
+                    target.append(path)
         return target
     except FileNotFoundError as e:
         print(e)
