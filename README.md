@@ -12,7 +12,11 @@
 
 *Encrypt and decrypt files with style. Built with Click and Rich for a delightful CLI experience.*
 
-[Features](#features) • [Installation](#installation) • [Usage](#usage) • [Ciphers](#available-ciphers) • [Documentation](https://github.com/skye-cyber/pylock/wiki)
+- [Features](#features) 
+- [Installation](#installation) 
+- [Usage](#usage) 
+- [Ciphers](#available-ciphers) 
+- [Documentation](https://github.com/skye-cyber/pylock/wiki)
 ---
 <!DOCTYPE html>
 <html lang="en">
