@@ -32,7 +32,7 @@
     <rect x="540" y="260" width="140" height="36" rx="18" fill="rgba(10,20,45,0.4)" stroke="rgba(90,160,255,0.15)"/>
     <text x="555" y="284" fill="#d5e5ff" font-size="14">&#x1F575;&#xFE0F; stealth mode</text>
     <!-- CTA Button -->
-    <rect x="40" y="320" width="200" height="50" rx="25" fill="#1d3b70" stroke="#4171c7"/>
+    <rect x="40" y="320" width="250" height="50" rx="25" fill="#1d3b70" stroke="#4171c7"/>
     <text x="75" y="350" fill="white" font-size="18" font-weight="600">&#x1F511; pip install pylock</text>
     <!-- Code snippet -->
     <rect x="260" y="320" width="320" height="50" rx="25" fill="#0d1424" stroke="#3165b0"/>
