@@ -10,7 +10,14 @@ class Vigenere(CipherInterface):
         handle_non_alpha: bool = True,
         preserve_case: bool = True,
     ):
+        """
+        Vigenère polyalphabetic substitution cipher.
 
+        Data compatibility: STRICTLY ASCII LETTERS ONLY (A-Z, case insensitive).
+        No bytes, no unicode, no numbers, no spaces preserved.
+
+        WARNING: Cryptographically broken - for educational/historical use only.
+        """
         self.key = key.lower().replace(" ", "")
         self.handle_non_alpha = handle_non_alpha
         self.preserve_case = preserve_case

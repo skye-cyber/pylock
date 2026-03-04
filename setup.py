@@ -1,51 +1,90 @@
-from setuptools import setup
-from
-DESCRIPTION = "CLI tool for encrypting and decrypting files and folders"
-EXCLUDE_FROM_PACKAGES = ["build", "dist", "test", "src"]
+#!/usr/bin/env python3
+"""Setup configuration for PyLock encryption suite."""
+
+from setuptools import setup, find_packages
+from pathlib import Path
+
+# Read README for long description
+README = (Path(__file__).parent / "README.md").read_text(encoding="utf-8")
+
+# Read requirements
+REQUIREMENTS = [
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "cryptography>=41.0.0",
+    "pycryptodome>=3.19.0",
+    "psutil>=5.9.0",  # For lock manager process checking
+]
+
+DESCRIPTION = (
+    "Modern CLI tool for encrypting and decrypting files and folders with style"
+)
 
 setup(
-    name="encryptionsuite",
-    version="1.0.7",
-    author="Wambua aka skye-cyber",
-    email="swskye17@gmail.com",
-    packages=["Encryptionsuite"],
-    long_description=open("README.md").read(),
+    name="pylock-suite",
+    version="2.0.0",
+    author="Wambua (Skye-Cyber)",
+    author_email="swskye17@gmail.com",
+    description=DESCRIPTION,
+    long_description=README,
     long_description_content_type="text/markdown",
-    entry_points={
-        "console_scripts": [
-            "Encryptionsuite=Encryptionsuite:main",
-            "encryptionsuite=Encryptionsuite:main",
-            "encryptor=Encryptionsuite:main",
+    url="https://github.com/skye-cyber/pylock",
+    packages=find_packages(exclude=["tests", "docs", "build", "dist"]),
+    package_dir={"": "src"},
+    python_requires=">=3.8",
+    install_requires=REQUIREMENTS,
+    extras_require={
+        "dev": [
+            "pytest>=7.0.0",
+            "pytest-cov>=4.0.0",
+            "black>=23.0.0",
+            "flake8>=6.0.0",
+            "mypy>=1.0.0",
         ],
     },
-    python_requires=">=3.0",
-    install_requires=["argparse", "cryptography"],
+    entry_points={
+        "console_scripts": [
+            "pylock=pylock.cli:main",
+            "pl=pylock.cli:main",  # Short alias
+        ],
+    },
     include_package_data=True,
-    license="GNU v3",
+    zip_safe=False,
+    license="GPL-3.0-or-later",
     keywords=[
-        "Encryptionsuite",
-        "FED",
-        "File-encryptor",
-        "File-decryptor",
-        "encrypt-files",
-        "decrypt-files",
-        "encrypt",
-        "decrypt",
+        "pylock",
+        "encryption",
+        "decryption",
+        "file-encryption",
+        "folder-encryption",
         "cryptography",
-        "ciphers",
+        "aes",
+        "chacha20",
+        "rsa",
+        "cli",
+        "security",
     ],
     classifiers=[
+        "Development Status :: 4 - Beta",
         "Environment :: Console",
+        "Intended Audience :: End Users/Desktop",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
         "Operating System :: OS Independent",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Topic :: Security :: Cryptography",
+        "Topic :: Utilities",
+        "Typing :: Typed",
     ],
+    project_urls={
+        "Bug Reports": "https://github.com/skye-cyber/pylock/issues",
+        "Source": "https://github.com/skye-cyber/pylock",
+        "Documentation": "https://github.com/skye-cyber/pylock/wiki",
+    },
 )

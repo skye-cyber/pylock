@@ -1,6 +1,6 @@
 from typing import Type
 from ..core.models import CIPHERS
-from ..core.interfaces import CipherInterface
+from ..core.interfaces import Cipher
 
 
 class Decorators:
@@ -28,7 +28,7 @@ class Decorators:
 
 
 def cipher(name: str = None):
-    def decorator(cls: Type[CipherInterface]):
+    def decorator(cls: Type[Cipher]):
         # Use class name or provided name
         key = name or cls.__name__.lower()
         CIPHERS[key] = cls

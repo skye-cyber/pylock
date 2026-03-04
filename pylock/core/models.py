@@ -1,11 +1,13 @@
 from enum import Enum
 import json
-from typing import Protocol, Type, Callable, Any
+from typing import Type, Union
 from dataclasses import dataclass, asdict
 from ..ciphers.caesar import Caesar
 from ..ciphers.playfair import Playfair
 from ..ciphers.vigenere import Vigenere
-from .interfaces import CipherInterface
+from .interfaces import Cipher
+
+StrBytes = Union[str, bytes]
 
 
 class PyLockerAction(str, Enum):
@@ -13,7 +15,7 @@ class PyLockerAction(str, Enum):
     DECRYPT = "decrypt"
 
 
-CIPHERS: dict[str, Type[CipherInterface]] = {}
+CIPHERS: dict[str, Type[Cipher]] = {}
 
 Ciphers = {
     "caesar": Caesar,
