@@ -1,7 +1,9 @@
-from ..core.interfaces import Ciphers
+from ..core.interfaces import CipherInterface
+from ..utils.decorators import cipher
 
 
-class Playfair(Ciphers):
+@cipher()
+class Playfair(CipherInterface):
     def __init__(self, key: str):
         self.key = key
 

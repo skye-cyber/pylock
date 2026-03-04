@@ -41,7 +41,7 @@ class LockInterface:
     def get_lock_pid(self, path: Path): ...
 
 
-class Ciphers:
+class CipherInterface:
     """All cipher must implement"""
 
     def encrypt(self, data: str) -> str: ...

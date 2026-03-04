@@ -1,8 +1,9 @@
-from ..core.interfaces import Ciphers
-from ..utils.decorators import decorators
+from ..core.interfaces import CipherInterface
+from ..utils.decorators import decorators, cipher
 
 
-class Vigenere(Ciphers):
+@cipher()
+class Vigenere(CipherInterface):
     def __init__(
         self,
         key: str,

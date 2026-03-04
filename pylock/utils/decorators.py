@@ -1,3 +1,8 @@
+from typing import Type
+from ..core.models import CIPHERS
+from ..core.interfaces import CipherInterface
+
+
 class Decorators:
     def __init__(self):
         pass
@@ -20,6 +25,16 @@ class Decorators:
             return wrapper
 
         return decorator
+
+
+def cipher(name: str = None):
+    def decorator(cls: Type[CipherInterface]):
+        # Use class name or provided name
+        key = name or cls.__name__.lower()
+        CIPHERS[key] = cls
+        return cls
+
+    return decorator
 
 
 decorators = Decorators()

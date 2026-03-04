@@ -176,6 +176,22 @@ class FileSystemError(SystemError):
         )
 
 
+class RuntimeError(RuntimeError):
+    """
+    Raised runtime erros.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        path: Optional[str] = None,
+    ):
+        details = {}
+        if path:
+            details["path"] = str(path)
+        super().__init__(message, details=details)
+
+
 class SystemPermissionError(SystemError):
     """
     Raised when OS-level permissions prevent access.

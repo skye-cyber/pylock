@@ -15,7 +15,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from .exceptions import PyLockError, KeyError, ValidationError
-from .interfaces import PyLockInterface
+from .interfaces import PyLockInterface, CipherInterface
 from ..config.model import ConfigModel
 
 
@@ -252,7 +252,9 @@ class BaseEncryptor(PyLockInterface):
         with open(path, "r", encoding="utf-8") as f:
             return f.read()
 
-    def encrypt(self, data: str | bytes, key: str | bytes, cipher=Fernet) -> str:
+    def encrypt(
+        self, data: str | bytes, key: str | bytes, cipher: CipherInterface = Fernet
+    ) -> str:
         """
         Encrypt data and return ciphertext with metadata header prepended.
 
@@ -284,7 +286,9 @@ class BaseEncryptor(PyLockInterface):
         # Return as base64 string for text safety, or handle as needed
         return base64.b64encode(combined).decode("ascii")
 
-    def decrypt(self, data: str | bytes, key: str | bytes, cipher=Fernet) -> str:
+    def decrypt(
+        self, data: str | bytes, key: str | bytes, cipher: CipherInterface = Fernet
+    ) -> str:
         """
         Decrypt data, automatically stripping the metadata header.
 
@@ -319,14 +323,16 @@ class BaseEncryptor(PyLockInterface):
         # Decrypt the actual content
         return self._perform_decryption(ciphertext, key, cipher)
 
-    def _perform_encryption(self, data: str, key: bytes, cipher) -> bytes:
+    def _perform_encryption(self, data: str, key: bytes, cipher=Fernet) -> bytes:
         """
         Actual encryption implementation.
         Placeholder - integrate with your specific cipher logic.
         """
-        # Example with Fernet
-        if cipher == "fernet" or str(cipher).lower() == "fernet":
-            f = Fernet(key)
+        if isinstance(key, str):
+            key = key.decode("ascii")
+
+        if cipher and callable(cipher):
+            f = cipher(key)
             return f.encrypt(data.encode("utf-8") if isinstance(data, str) else data)
 
         # Example with AES-GCM
@@ -336,29 +342,21 @@ class BaseEncryptor(PyLockInterface):
             ciphertext = aesgcm.encrypt(nonce, data.encode("utf-8"), None)
             return nonce + ciphertext
 
-        # Fallback: assume cipher is a callable
-        if callable(cipher):
-            return cipher(key, data, mode="encrypt")
-
         raise ValueError(f"Unsupported cipher: {cipher}")
 
-    def _perform_decryption(self, data: bytes, key: str | bytes, cipher) -> str:
+    def _perform_decryption(self, data: bytes, key: str | bytes, cipher: Fernet) -> str:
         """Actual decryption implementation."""
         if isinstance(key, str):
             key = key.encode("utf-8")
 
-        if cipher == "fernet" or str(cipher).lower() == "fernet":
-            f = Fernet(key)
+        if cipher and callable(cipher):
+            f = cipher(key)
             return f.decrypt(data).decode("utf-8")
 
         elif cipher == "aes-gcm" or str(cipher).lower() == "aes-gcm":
             aesgcm = AESGCM(key[:32])
             nonce, ciphertext = data[:12], data[12:]
             return aesgcm.decrypt(nonce, ciphertext, None).decode("utf-8")
-
-        if callable(cipher):
-            result = cipher(key, data, mode="decrypt")
-            return result.decode("utf-8") if isinstance(result, bytes) else result
 
         raise ValueError(f"Unsupported cipher: {cipher}")
 
@@ -375,3 +373,5 @@ class BaseEncryptor(PyLockInterface):
         if info and "cipher" in info:
             return info["cipher"]
         return "fernet"  # Default
+
+    def get_cipher_byname(self, name: str) -> CipherInterface: ...

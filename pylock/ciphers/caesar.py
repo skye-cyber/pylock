@@ -1,7 +1,9 @@
-from ..core.interfaces import Ciphers
+from ..core.interfaces import CipherInterface
+from ..utils.decorators import cipher
 
 
-class Caesar(Ciphers):
+@cipher()
+class Caesar(CipherInterface):
     def __init__(self, key: int | str = 8):
         """Filter key type here to avoid error during initilization"""
         self.key = key if isinstance(key, int) and key >= 26 else 8
