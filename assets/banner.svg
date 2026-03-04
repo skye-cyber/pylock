@@ -11,7 +11,7 @@
         </linearGradient>
     </defs>
     <!-- Background -->
-    <rect width="1040" height="400" rx="60" fill="url(#bg)" stroke="rgba(90,150,255,0.2)" stroke-width="2"/>
+    <rect width="780" height="400" rx="60" fill="url(#bg)" stroke="rgba(90,150,255,0.2)" stroke-width="2"/>
     <!-- Label -->
     <rect x="40" y="30" width="180" height="36" rx="18" fill="rgba(45,85,255,0.12)" stroke="rgba(65,150,255,0.3)"/>
     <text x="60" y="54" fill="#b5d0ff" font-size="14" font-weight="500">&#x1F512; PyLock &#xB7; v2.0.0</text>
@@ -33,13 +33,13 @@
     <text x="555" y="284" fill="#d5e5ff" font-size="14">&#x1F575;&#xFE0F; stealth mode</text>
     <!-- CTA Button -->
     <rect x="40" y="320" width="250" height="50" rx="25" fill="#1d3b70" stroke="#4171c7"/>
-    <text x="75" y="350" fill="white" font-size="18" font-weight="600">&#x1F511; pip install pylock</text>
+    <text x="50" y="350" fill="white" font-size="18" font-weight="600">&#x1F511; pip install pylock</text>
     <!-- Code snippet -->
-    <rect x="260" y="320" width="320" height="50" rx="25" fill="#0d1424" stroke="#3165b0"/>
-    <text x="280" y="350" fill="#c3ddff" font-family="monospace" font-size="14"><tspan fill="#ffcb6b">$</tspan> pylock encrypt secrets/</text>
+    <rect x="300" y="320" width="250" height="50" rx="25" fill="#0d1424" stroke="#3165b0"/>
+    <text x="310" y="350" fill="#c3ddff" font-family="monospace" font-size="14"><tspan fill="#ffcb6b">$</tspan> pylock encrypt secrets/</text>
     <!-- OS labels -->
     <text x="40" y="390" fill="#6279b0" font-size="12">&#x1F427; linux  &#xF8FF; macOS  &#x229E; windows &#xB7; 100% pure python</text>
     <!-- Right side emblem -->
-    <text x="850" y="200" font-size="100" fill="#2580ff" opacity="0.9">&#x1F512;</text>
-    <text x="820" y="280" fill="#2f6fbb" font-family="monospace" font-size="14" font-weight="600">0100101 &#x21C6; 101001</text>
+    <text x="550" y="200" font-size="100" fill="#2580ff" opacity="0.9">&#x1F512;</text>
+    <text x="550" y="240" fill="#2f6fbb" font-family="monospace" font-size="14" font-weight="600">0100101 &#x21C6; 101001</text>
 </svg>
