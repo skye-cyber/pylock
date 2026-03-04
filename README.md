@@ -18,7 +18,7 @@
 - [Ciphers](#available-ciphers) 
 - [Documentation](https://github.com/skye-cyber/pylock/wiki)
 ---
-![PyLock Banner](banner.svg)
+![PyLock Banner](assets/banner.svg)
 ---
 
 ## ✨ Features
