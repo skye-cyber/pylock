@@ -19,10 +19,11 @@ class Decorators:
 
         def decorator(func):
             def wrapper(self, *args, **kwargs):
+                results = []
                 for item in data_list:
-                    func(self, item, *args, **kwargs)
-
-            return wrapper
+                    result = func(self, item, *args, **kwargs)
+                    results.append(result)
+                return results
 
         return decorator
 

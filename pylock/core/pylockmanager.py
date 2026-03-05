@@ -97,8 +97,8 @@ class PyLock(BaseEncryptor):
 
         files = self.fs.collect_files(path)
 
-        @decorators.for_loop(files)
-        def process(file):
+        # Process each file directly
+        for file in files:
             self.process_file(
                 Path(file), passphrase, action, cipher, compress, output_path
             )
@@ -166,8 +166,8 @@ class PyLock(BaseEncryptor):
         cipher=None,
         output_path=None,
     ):
-        """Encrypt a file with explicit parameters."""
-        return self.process_file(
+        """Decrypt a directory with explicit parameters."""
+        return self.process_dir(
             passphrase=passphrase,
             action=PyLockerAction.DECRYPT,
             path=path,
