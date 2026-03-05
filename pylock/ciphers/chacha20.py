@@ -18,6 +18,15 @@ class ChaCha20Cipher(CipherInterface):
         """Key must be 32 bytes."""
         self.key = key
         self.cipher_name = "ChaCha20-Poly1305"
+        
+        # Only validate key if it's provided (allow instantiation without key for compatibility checks)
+        if self.key is not None:
+            if not isinstance(self.key, bytes):
+                raise ValidationError(f"Key must be bytes, got {type(self.key).__name__}")
+            if len(self.key) != 32:
+                raise ValidationError(f"Key must be 32 bytes, got {len(self.key)}")
+        
+
 
     def is_data_compatible(self, data: StrBytes) -> bool:
         """ChaCha20 accepts any string data."""

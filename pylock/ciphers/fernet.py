@@ -37,3 +37,34 @@ class Fernet(fnt):
     def _b64decode(self, data: str) -> bytes:
         """Helper: base64 decode from string."""
         return base64.urlsafe_b64decode(data.encode("ascii"))
+
+    def encrypt(self, data: StrBytes) -> str:
+        """Encrypt data using Fernet."""
+        if not self.key:
+            raise ValueError("Fernet key not set")
+        
+        # Convert data to bytes
+        data_bytes = self._to_bytes(data)
+        
+        # Encrypt using parent class method
+        encrypted_bytes = super().encrypt(data_bytes)
+        
+        # Return as base64 string
+        return self._b64encode(encrypted_bytes)
+
+    def decrypt(self, data: StrBytes) -> str:
+        """Decrypt data using Fernet."""
+        if not self.key:
+            raise ValueError("Fernet key not set")
+        
+        # Convert data to bytes if it's a string
+        if isinstance(data, str):
+            data_bytes = self._b64decode(data)
+        else:
+            data_bytes = data
+        
+        # Decrypt using parent class method
+        decrypted_bytes = super().decrypt(data_bytes)
+        
+        # Return as string
+        return self._to_str(decrypted_bytes)

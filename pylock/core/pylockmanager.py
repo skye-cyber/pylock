@@ -53,7 +53,8 @@ class PyLock(BaseEncryptor):
 
             output_path = self.get_enc_output_file(output_path)
             # Determine cipher from configuration
-            cipher = CipherFactory.CIPHERS.get(cipher, None)
+            cipher_class = CipherFactory.CIPHERS.get(cipher, None)
+            cipher = cipher_class
             _data = self.encrypt(data, key, cipher)
 
         elif action == PyLockerAction.DECRYPT:
@@ -63,10 +64,10 @@ class PyLock(BaseEncryptor):
 
             output_path = self.get_dec_output_file(output_path)
             # Determine cipher from configuration
-            _cipher = self.guess_cipher(info) or info.get("cipher", None)
+            cipher_name = self.guess_cipher(info) or info.get("cipher", None)
 
-            if _cipher:
-                cipher = CipherFactory.CIPHERS[cipher]
+            if cipher_name:
+                cipher = CipherFactory.CIPHERS.get(cipher_name)
             else:
                 cipher = CipherFactory.CIPHERS.get(cipher)
 

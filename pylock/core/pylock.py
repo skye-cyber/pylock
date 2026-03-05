@@ -181,11 +181,9 @@ class BaseEncryptor(PyLockInterface, KeyManager):
 
             try:
                 metadata = json.loads(json_bytes.decode("utf-8"))
-                # Calculate header size including Base64 encoding overhead
+                # Store the binary header size (not Base64 encoded)
                 original_header_size = 9 + json_len
-                metadata["_header_size"] = len(
-                    base64.b64encode(decoded_data[:original_header_size])
-                )
+                metadata["_header_size"] = original_header_size
                 metadata["_is_encrypted"] = True
                 return metadata
             except (json.JSONDecodeError, UnicodeDecodeError):
@@ -347,12 +345,7 @@ class BaseEncryptor(PyLockInterface, KeyManager):
         # This contains: nonce(12) + actual ciphertext
         ciphertext_with_nonce = binary_data[binary_header_size:]
 
-        print(f"Header size: {binary_header_size}")
-        print(f"Total binary data: {len(binary_data)}")
-        print(f"Ciphertext with nonce: {len(ciphertext_with_nonce)} bytes")
-        print(
-            f"Nonce should be first 12 bytes, then {len(ciphertext_with_nonce) - 12} bytes ciphertext"
-        )
+
 
         # STEP 3: Get the correct cipher from metadata if specified
         expected_cipher_name = info.get("cipher")
@@ -373,7 +366,6 @@ class BaseEncryptor(PyLockInterface, KeyManager):
         if not decrypted_data:
             raise PyLockError("Could not decrypt data: Invalid key")
 
-        print(f"Decrypted data length: {len(decrypted_data)} characters")
         return decrypted_data
 
     def _perform_encryption(
@@ -394,7 +386,7 @@ class BaseEncryptor(PyLockInterface, KeyManager):
             raise ValidationError(f"Unsupported cipher: {cipher}")
 
         # Create cipher instance with the key
-        f = cipher(key=key)
+        f = cipher(key)
 
         # Encrypt - cipher.encrypt() returns Base64 string (per interface)
         encrypted_b64 = f.encrypt(data)
@@ -445,8 +437,22 @@ class BaseEncryptor(PyLockInterface, KeyManager):
         """Extract cipher identifier from cipher object/type."""
         if isinstance(cipher, str):
             return cipher
+        
+        # If it's a cipher class, find the corresponding key in CipherFactory
         if hasattr(cipher, "__name__"):
-            return cipher.__name__
+            cipher_class_name = cipher.__name__
+            # Map class names to factory keys
+            class_to_factory_key = {
+                "AES256GCMCipher": "aes-256-gcm",
+                "ChaCha20Cipher": "chacha20",
+                "OneTimePadCipher": "otp",
+                "RSACipher": "rsa",
+                "Vigenere": "vigenere",
+                "HybridRSAAESCipher": "hybrid-rsa-aes",
+                "Fernet": "fernet",
+            }
+            return class_to_factory_key.get(cipher_class_name, cipher_class_name.lower())
+        
         return type(cipher).__name__
 
     def guess_cipher(self, info: dict):
