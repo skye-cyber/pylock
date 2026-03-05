@@ -155,11 +155,11 @@ def encrypt(ctx, path, cipher, passphrase, key_file, output, no_compress):
             info_table.add_row("Cipher", cipher.upper())
             if path.is_file():
                 info_table.add_row(
-                    "File size",
+                    "File size:",
                     f"{os.path.getsize(Path(output_path).absolute().as_posix()):,} bytes",
                 )
             info_table.add_row(
-                "File count",
+                "File count:",
                 f"{result[1]} {'files' if result[1] > 1 else 'file'}",
             )
             if key_file:
@@ -167,8 +167,9 @@ def encrypt(ctx, path, cipher, passphrase, key_file, output, no_compress):
             console.print(
                 Panel(
                     info_table,
-                    title="[bold]Encryption Details[/bold]",
+                    title="[bold]Details[/bold]",
                     border_style="green",
+                    expand=False,
                 )
             )
 
@@ -287,12 +288,20 @@ def decrypt(ctx, path, passphrase, cipher, key_file, output, brute_force, wordli
             info_table = Table(box=box.SIMPLE, show_header=False)
             if path.is_file():
                 info_table.add_row(
-                    "File size",
+                    "File size:",
                     f"{os.path.getsize(Path(output_path).absolute().as_posix()):,} bytes",
                 )
             info_table.add_row(
-                "File count",
+                "File count:",
                 f"{result[1]} {'files' if result[1] > 1 else 'file'}",
+            )
+            console.print(
+                Panel(
+                    info_table,
+                    title="[bold]Details[/bold]",
+                    border_style="green",
+                    expand=False,
+                )
             )
     except Exception as e:
         console.print(f"\n[error]✗ Decryption failed:[/error] {str(e)}")

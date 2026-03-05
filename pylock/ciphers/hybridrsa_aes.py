@@ -21,7 +21,7 @@ class HybridRSAAESCipher(CipherInterface):
 
     def is_data_compatible(self, data: StrBytes) -> bool:
         """Hybrid accepts any string (AES handles bulk, RSA handles key)."""
-        return isinstance(data, str, bytes)
+        return isinstance(data, (str, bytes))
 
     def encrypt(self, data: StrBytes) -> str:
         """Generate random AES key, encrypt data with AES, encrypt key with RSA."""

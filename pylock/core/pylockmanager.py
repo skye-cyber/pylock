@@ -5,7 +5,8 @@ from pathlib import Path
 from .pylock import BaseEncryptor
 from .models import PyLockerAction
 from ..utils.file_utils import FileSystemHandler
-from ..utils.decorators import decorators
+
+# from ..utils.decorators import decorators
 from .exceptions import UserError, ValidationError, SystemError
 from .models import Ciphers
 from ..ciphers.factory import CipherFactory
@@ -16,6 +17,9 @@ class PyLock(BaseEncryptor):
         super().__init__(*args, **kwargs)
 
         self.fs = FileSystemHandler()
+        self.processed_items = 0
+
+    def __enter__(self):
         self.processed_items = 0
 
     def process_file(
@@ -78,7 +82,7 @@ class PyLock(BaseEncryptor):
 
         self.write_file(output_path, _data, "wb")
         self.processed_items += 1
-        return output_path, self.processed_items
+        return output_path, 1
 
     def process_dir(
         self,
@@ -91,20 +95,21 @@ class PyLock(BaseEncryptor):
     ):
         path = path.expanduser().absolute()
         if path.is_file() and passphrase:
-            self.process_file(
+            return self.process_file(
                 path, passphrase, action, cipher, action, compress, output_path
             )
 
-        files = self.fs.collect_files(path)
+        else:
+            files = self.fs.collect_files(path)
 
-        # Process each file directly
-        for file in files:
-            self.process_file(
-                Path(file), passphrase, action, cipher, compress, output_path
-            )
-            self.processed_items += 1
+            # Process each file directly
+            for file in files:
+                self.process_file(
+                    Path(file), passphrase, action, cipher, compress, output_path
+                )
+                self.processed_items += 1
 
-        return path, self.processed_items
+            return path, len(files)
 
     def get_enc_output_file(self, path: Path):
         return path.absolute().parent / f"{path.name}.plocked"

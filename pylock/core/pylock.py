@@ -236,7 +236,15 @@ class BaseEncryptor(PyLockInterface, KeyManager):
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        if "b" in mode:
+        # Handle data type and mode conversion
+        if isinstance(data, str) and data.startswith("BINARY:"):
+            # This is base64-encoded binary data
+            import base64
+
+            binary_data = base64.b64decode(data[7:])  # Remove "BINARY:" prefix
+            # mode = mode.replace("w", "wb")
+            data = binary_data
+        elif "b" in mode:
             if isinstance(data, str):
                 data = data.encode("utf-8")
         else:
@@ -270,9 +278,18 @@ class BaseEncryptor(PyLockInterface, KeyManager):
         #     # Return as string (base64 encoded ciphertext)
         #     return base64.b64encode(ciphertext).decode("ascii")
 
-        # Regular file read
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read()
+        # Regular file read - try UTF-8 first, fall back to base64 for binary files
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read()
+        except UnicodeDecodeError:
+            # File is binary, read as bytes and base64 encode with marker
+            with open(path, "rb") as f:
+                import base64
+
+                binary_data = f.read()
+                # Use a special prefix to mark binary data
+                return "BINARY:" + base64.b64encode(binary_data).decode("ascii")
 
     def encrypt(
         self,
@@ -344,8 +361,6 @@ class BaseEncryptor(PyLockInterface, KeyManager):
 
         # This contains: nonce(12) + actual ciphertext
         ciphertext_with_nonce = binary_data[binary_header_size:]
-
-
 
         # STEP 3: Get the correct cipher from metadata if specified
         expected_cipher_name = info.get("cipher")
@@ -437,7 +452,7 @@ class BaseEncryptor(PyLockInterface, KeyManager):
         """Extract cipher identifier from cipher object/type."""
         if isinstance(cipher, str):
             return cipher
-        
+
         # If it's a cipher class, find the corresponding key in CipherFactory
         if hasattr(cipher, "__name__"):
             cipher_class_name = cipher.__name__
@@ -451,8 +466,10 @@ class BaseEncryptor(PyLockInterface, KeyManager):
                 "HybridRSAAESCipher": "hybrid-rsa-aes",
                 "Fernet": "fernet",
             }
-            return class_to_factory_key.get(cipher_class_name, cipher_class_name.lower())
-        
+            return class_to_factory_key.get(
+                cipher_class_name, cipher_class_name.lower()
+            )
+
         return type(cipher).__name__
 
     def guess_cipher(self, info: dict):
