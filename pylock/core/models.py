@@ -1,11 +1,7 @@
 from enum import Enum
 import json
-from typing import Type, Union
+from typing import Union
 from dataclasses import dataclass, asdict
-from ..ciphers.caesar import Caesar
-from ..ciphers.playfair import Playfair
-from ..ciphers.vigenere import Vigenere
-from .interfaces import Cipher
 
 StrBytes = Union[str, bytes]
 
@@ -15,13 +11,15 @@ class PyLockerAction(str, Enum):
     DECRYPT = "decrypt"
 
 
-CIPHERS: dict[str, Type[Cipher]] = {}
+class Ciphers(str, Enum):
+    AES256GCMCipher = "aes-256-gcm"
+    ChaCha20Cipher = "chacha20"
+    OneTimePadCipher = "otp"
+    RSACipher = "rsa"
+    Vigenere = "vigenere"
+    HybridRSAAESCipher = "hybrid-rsa-aes"
+    Fernet = "fernet"
 
-Ciphers = {
-    "caesar": Caesar,
-    "vigenere": Playfair,
-    "playfair": Vigenere,
-}
 
 LockerHeader: dict = {
     "version": str,

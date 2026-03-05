@@ -1,6 +1,7 @@
 from typing import Optional
 from ..core.interfaces import CipherInterface
 from ..core.models import StrBytes
+from ..core.exceptions import ValidationError
 
 
 class OneTimePadCipher(CipherInterface):
@@ -26,7 +27,7 @@ class OneTimePadCipher(CipherInterface):
         if not isinstance(data, (str, bytes)):
             return False
 
-        data_len = len(data) if isinstance(data, str) else len(data)
+        data_len = len(data)  # if isinstance(data, str) else len(data)
 
         if self.key is None:
             return False  # No key provided
@@ -37,24 +38,24 @@ class OneTimePadCipher(CipherInterface):
 
         return True
 
-    def encrypt(self, data: str) -> str:
+    def encrypt(self, data: StrBytes) -> str:
         """XOR data with key. DESTROYS key after use."""
         if not self.is_data_compatible(data):
-            raise ValueError(
+            raise ValidationError(
                 "OTP incompatible: ensure key length >= data length and unused"
             )
 
-        plaintext = data.encode("utf-8")
+        plaintext = data.encode("utf-8") if isinstance(data, str) else data
         # XOR each byte
         ciphertext = bytes(p ^ k for p, k in zip(plaintext, self.key))
 
         self.used = True  # Mark as used
         return self._b64encode(ciphertext)
 
-    def decrypt(self, data: str) -> str:
+    def decrypt(self, data: StrBytes) -> str:
         """XOR is symmetric: ciphertext ^ key = plaintext."""
         if not self.used:
-            raise ValueError("OTP key not marked as used - possible key reuse")
+            raise ValidationError("OTP key not marked as used - possible key reuse")
 
         ciphertext = self._b64decode(data)
         # XOR again to decrypt

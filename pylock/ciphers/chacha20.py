@@ -3,6 +3,7 @@ from typing import Optional
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 from ..core.interfaces import CipherInterface
 from ..core.models import StrBytes
+from ..core.exceptions import ValidationError, PyLockError
 
 
 class ChaCha20Cipher(CipherInterface):
@@ -15,7 +16,7 @@ class ChaCha20Cipher(CipherInterface):
 
     def __init__(self, key: Optional[bytes] = None):
         """Key must be 32 bytes."""
-        self.key = key if key and len(key) == 32 else os.urandom(32)
+        self.key = key
         self.cipher_name = "ChaCha20-Poly1305"
 
     def is_data_compatible(self, data: StrBytes) -> bool:
@@ -24,12 +25,14 @@ class ChaCha20Cipher(CipherInterface):
 
     def encrypt(self, data: str) -> str:
         """Encrypt with ChaCha20-Poly1305."""
-        if not isinstance(data, str):
-            raise TypeError(f"ChaCha20 expects str, got {type(data).__name__}")
+        if not self.is_data_compatible(data):
+            raise ValidationError(
+                f"ChaCha20 expects str,bytes got {type(data).__name__}"
+            )
 
         chacha = ChaCha20Poly1305(self.key)
         nonce = os.urandom(12)
-        plaintext = data.encode("utf-8")
+        plaintext = data.encode("utf-8") if isinstance(data, str) else data
         ciphertext = chacha.encrypt(nonce, plaintext, None)
 
         return self._b64encode(nonce + ciphertext)
@@ -44,4 +47,4 @@ class ChaCha20Cipher(CipherInterface):
             plaintext = chacha.decrypt(nonce, ciphertext, None)
             return plaintext.decode("utf-8")
         except Exception as e:
-            raise ValueError(f"Decryption failed: {e}")
+            raise PyLockError(f"Decryption failed: {e}")

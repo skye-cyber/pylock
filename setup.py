@@ -21,7 +21,7 @@ DESCRIPTION = (
 )
 
 setup(
-    name="pylock-suite",
+    name="pylock",
     version="2.0.0",
     author="Wambua (Skye-Cyber)",
     author_email="swskye17@gmail.com",
@@ -30,7 +30,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/skye-cyber/pylock",
     packages=find_packages(exclude=["tests", "docs", "build", "dist"]),
-    package_dir={"": "src"},
+    package_dir={"": ""},
     python_requires=">=3.8",
     install_requires=REQUIREMENTS,
     extras_require={
@@ -69,7 +69,7 @@ setup(
         "Environment :: Console",
         "Intended Audience :: End Users/Desktop",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        # "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",

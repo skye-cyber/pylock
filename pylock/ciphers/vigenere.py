@@ -1,12 +1,15 @@
+import base64
+from typing import Optional
 from ..core.interfaces import CipherInterface
 from ..utils.decorators import decorators, cipher
+from ..core.exceptions import ValidationError
 
 
 @cipher()
 class Vigenere(CipherInterface):
     def __init__(
         self,
-        key: str,
+        key: Optional[bytes] = None,
         handle_non_alpha: bool = True,
         preserve_case: bool = True,
     ):
@@ -18,7 +21,7 @@ class Vigenere(CipherInterface):
 
         WARNING: Cryptographically broken - for educational/historical use only.
         """
-        self.key = key.lower().replace(" ", "")
+        self.key = key
         self.handle_non_alpha = handle_non_alpha
         self.preserve_case = preserve_case
 
@@ -26,14 +29,19 @@ class Vigenere(CipherInterface):
     def validate_key(key: str):
         if not all([c.isalpha() for c in key]) or len(key) < 1:
             # TODO Trasform numeric to alpha instead of throwing an error
-            raise ValueError("VigenereCipher only accepts alphabetical keys")
+            raise ValidationError("VigenereCipher only accepts alphabetical keys")
+
+    def is_data_compatible(self, data: str) -> bool:
+        if not isinstance(data, str):
+            return False
+
+        return True
 
     def clean_key(key: str) -> str:
         return key.lower().replace(" ", "")
 
     def encrypt(self, data: str) -> str:
-        key = self.clean_key(self.key)
-        self.validate_key(key)
+        self.validate_key(self.key)
 
         result = []
         key_length = len(self.key)
@@ -62,8 +70,7 @@ class Vigenere(CipherInterface):
         return result
 
     def decrypt(self, data: str) -> str:
-        key = self.clean_key(self.key)
-        self.validate_key(key)
+        self.validate_key(self.key)
 
         result = []
         key_length = len(self.key)

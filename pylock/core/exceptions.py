@@ -77,6 +77,18 @@ class SystemError(PyLockError):
 # =============================================================================
 
 
+class TypeError(UserError):
+    """Raised when input validation fails."""
+
+    def __init__(self, message: str, field: Optional[str] = None, value: Any = None):
+        details = {}
+        if field:
+            details["field"] = field
+        if value is not None:
+            details["value"] = repr(value)
+        super().__init__(message, details=details)
+
+
 class ValidationError(UserError):
     """Raised when input validation fails."""
 

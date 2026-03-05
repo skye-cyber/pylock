@@ -1,15 +1,15 @@
 from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import Protocol
+from typing import Protocol, Union
 import base64
-from .models import StrBytes
+from ..config.model import ConfigModel
+from .models import Ciphers, PyLockerAction
+
+StrBytes = Union[str, bytes]
 
 
 class PyLockInterface(ABC):
     """Suite interface"""
-
-    @property
-    def random_enc_key() -> str: ...
 
     @abstractmethod
     def save_keyfile(self, key, path: Path): ...
@@ -30,19 +30,32 @@ class PyLockInterface(ABC):
     def write_metadata(self, data: str | bytes): ...
 
     @abstractmethod
-    def process_file(self, path: Path, key: str | bytes): ...
+    def process_file(
+        self,
+        path: Path,
+        passphrase: str,
+        action: PyLockerAction,
+        cipher: Ciphers = Ciphers.AES256GCMCipher,
+        compress: bool = False,
+        output_path: Path = None,
+    ): ...
 
     @abstractmethod
-    def process_dir(self, path: Path, key: str | bytes): ...
+    def process_dir(
+        self,
+        path: Path,
+        passphrase: str,
+        action: PyLockerAction,
+        cipher: Ciphers = Ciphers.AES256GCMCipher,
+        compress: bool = False,
+        output_path: Path = None,
+    ): ...
 
     @abstractmethod
     def read_encryption_info(self, path: Path) -> dict: ...
 
     @abstractmethod
     def is_encrypted(self, path: Path) -> bool: ...
-
-    @abstractmethod
-    def passphrase_to_key(self, passphrase: str, salt: str) -> str: ...
 
     @abstractmethod
     def guess_cipher(self, info: dict): ...
@@ -95,10 +108,27 @@ class CipherInterface(ABC):
 
     def _b64decode(self, data: str) -> bytes:
         """Helper: base64 decode from string."""
-        return base64.urlsafe_b64decode(data.encode("ascii"))
+        enc = base64.urlsafe_b64decode(data.encode("ascii"))
+        return enc
 
 
 class Cipher(Protocol):
     def encrypt(self, data: str) -> str: ...
     def decrypt(self, data: str) -> str: ...
     def is_data_compartible(self, data: str | bytes) -> bool: ...
+
+
+class KeyMnagerInterface(ABC):
+    @staticmethod
+    def random_enc_key() -> str: ...
+
+    @staticmethod
+    def derive_key_from_passphrase(
+        passphrase: str, salt: bytes = ConfigModel.DEFAULTSALT
+    ) -> tuple[bytes, bytes]: ...
+
+    @staticmethod
+    def key_to_hex(key: bytes) -> str: ...
+
+    @staticmethod
+    def hex_to_key(hex_str: str) -> bytes: ...

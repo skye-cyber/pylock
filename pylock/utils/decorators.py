@@ -1,5 +1,5 @@
 from typing import Type
-from ..core.models import CIPHERS
+from ..ciphers.cipher_model import CIPHERS
 from ..core.interfaces import Cipher
 
 

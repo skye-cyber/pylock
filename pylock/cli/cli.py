@@ -1,81 +1,17 @@
 import os
 import sys
 from pathlib import Path
-from typing import Optional, List
 import click
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Prompt, Confirm
-from rich.syntax import Syntax
-from rich.tree import Tree
+from typing import Optional
+from rich.prompt import Prompt
 from rich import box
-
-from .utils.logging import simple_logger as logger
-from .core.pylockmanager import PyLock
-from .ciphers.factory import CipherFactory
-
-# Initialize Rich console
-console = Console()
-
-# Custom styles
-STYLES = {
-    "primary": "bold cyan",
-    "success": "bold green",
-    "warning": "bold yellow",
-    "error": "bold red",
-    "info": "bold blue",
-    "muted": "dim white",
-    "highlight": "bold magenta",
-}
-
-
-def print_banner():
-    """Display application banner."""
-    banner = """
-    [bold cyan]╔═══════════════════════════════════════╗[/bold cyan]
-    [bold cyan]║[/bold cyan]     🔐  [bold white]PyLock Encryption Suite[/bold white]  [bold cyan]║[/bold cyan]
-    [bold cyan]║[/bold cyan]         [dim]Secure. Simple. Modern.[/dim]      [bold cyan]║[/bold cyan]
-    [bold cyan]╚═══════════════════════════════════════╝[/bold cyan]
-    """
-    console.print(banner)
-
-
-def print_ciphers_table():
-    """Display available ciphers in a formatted table."""
-    table = Table(
-        title="[bold]Available Encryption Ciphers[/bold]",
-        box=box.ROUNDED,
-        show_header=True,
-        header_style="bold cyan",
-    )
-
-    table.add_column("Cipher", style="bold green")
-    table.add_column("Security", style="yellow")
-    table.add_column("Use Case", style="dim white")
-    table.add_column("Password", style="cyan")
-
-    ciphers_info = [
-        ("AES-256-GCM", "🔒 Modern", "General purpose encryption", "✓ Required"),
-        ("ChaCha20-Poly1305", "🔒 Modern", "Mobile/ARM devices", "✓ Required"),
-        ("Fernet", "🔒 Modern", "Simple password-based", "✓ Required"),
-        ("RSA-OAEP", "🔒 Asymmetric", "Key exchange, small data", "Key pair"),
-        ("Hybrid-RSA-AES", "🔒 Modern", "Large data + asymmetric", "Key pair"),
-        ("Caesar", "⚠️  Classical", "Educational only", "✗ Shift number"),
-        ("Vigenère", "⚠️  Classical", "Educational only", "Keyword"),
-        ("Playfair", "⚠️  Classical", "Educational only", "Keyword"),
-        ("Morse", "⚠️  Encoding", "Text encoding", "✗ None"),
-    ]
-
-    for cipher, security, use_case, password in ciphers_info:
-        table.add_row(cipher, security, use_case, password)
-
-    console.print(table)
-    console.print(
-        "\n[dim]Note: Classical ciphers are for educational purposes only. "
-        "Do not use for sensitive data.[/dim]\n"
-    )
+from ..core.pylockmanager import PyLock
+from ..ciphers.factory import CipherFactory
+from .__shared__ import console  # , STYLES
+from .utils import print_ciphers_table, print_banner
 
 
 # Custom Click context for sharing state
@@ -123,11 +59,11 @@ def cli(ctx, verbose, quiet):
 )
 @click.option(
     "-p",
-    "--password",
+    "--passphrase",
     prompt=True,
     hide_input=True,
     confirmation_prompt=True,
-    help="Encryption password (will be prompted if not provided)",
+    help="Encryption passphrase (will be prompted if not provided)",
 )
 @click.option(
     "-k",
@@ -147,7 +83,7 @@ def cli(ctx, verbose, quiet):
     help="Disable compression before encryption",
 )
 @pass_context
-def encrypt(ctx, path, cipher, password, key_file, output, no_compress):
+def encrypt(ctx, path, cipher, passphrase, key_file, output, no_compress):
     """
     🔒 Encrypt a file or folder.
 
@@ -187,15 +123,19 @@ def encrypt(ctx, path, cipher, password, key_file, output, no_compress):
 
             if path.is_dir():
                 result = ctx.pylock.encrypt_directory(
-                    path,
-                    password=password,
+                    path=path,
+                    passphrase=passphrase,
                     cipher=cipher,
                     compress=not no_compress,
-                    output=output,
+                    output_path=output,
                 )
             else:
                 result = ctx.pylock.encrypt_file(
-                    path, password=password, cipher=cipher, output=output
+                    path=path,
+                    passphrase=passphrase,
+                    cipher=cipher,
+                    compress=not no_compress,
+                    output_path=output,
                 )
 
             progress.update(task, description="Finalizing...")
@@ -203,17 +143,25 @@ def encrypt(ctx, path, cipher, password, key_file, output, no_compress):
             # Save key if requested
             if key_file:
                 progress.update(task, description="Saving key file...")
-                ctx.pylock.save_key_file(key_file, password)
+                ctx.pylock.save_key_file(key_file, passphrase)
 
         if not ctx.quiet:
-            output_path = output or f"{path}.locked"
-            console.print(f"\n[success]✓ Encryption successful![/success]")
+            output_path = result[0]
+            console.print("\n[success]✓ Encryption successful![/success]")
             console.print(f"[dim]Output:[/dim] [highlight]{output_path}[/highlight]")
 
             # Show security info
             info_table = Table(box=box.SIMPLE, show_header=False)
             info_table.add_row("Cipher", cipher.upper())
-            info_table.add_row("File size", f"{os.path.getsize(output_path):,} bytes")
+            if path.is_file():
+                info_table.add_row(
+                    "File size",
+                    f"{os.path.getsize(Path(output_path).absolute().as_posix()):,} bytes",
+                )
+            info_table.add_row(
+                "File count",
+                f"{result[1]} {'files' if result[1] > 1 else 'file'}",
+            )
             if key_file:
                 info_table.add_row("Key file", str(key_file))
             console.print(
@@ -236,10 +184,17 @@ def encrypt(ctx, path, cipher, password, key_file, output, no_compress):
 @click.argument("path", type=click.Path(exists=True, path_type=Path))
 @click.option(
     "-p",
-    "--password",
+    "--passphrase",
     prompt=True,
     hide_input=True,
-    help="Decryption password (will be prompted if not provided)",
+    help="Decryption passphrase (will be prompted if not provided)",
+)
+@click.option(
+    "-c",
+    "--cipher",
+    type=click.Choice(list(CipherFactory.CIPHERS.keys()), case_sensitive=False),
+    default="aes-256-gcm",
+    help="Encryption cipher to use (default: aes-256-gcm), System shall attempt detection",
 )
 @click.option(
     "-k",
@@ -266,7 +221,7 @@ def encrypt(ctx, path, cipher, password, key_file, output, no_compress):
     help="Wordlist file for brute force",
 )
 @pass_context
-def decrypt(ctx, path, password, key_file, output, brute_force, wordlist):
+def decrypt(ctx, path, passphrase, cipher, key_file, output, brute_force, wordlist):
     """
     🔓 Decrypt a file or folder.
 
@@ -307,27 +262,43 @@ def decrypt(ctx, path, password, key_file, output, brute_force, wordlist):
 
             progress.update(task, description="Decrypting data...")
 
-            if path.is_dir() or str(path).endswith(".locked"):
-                result = (
-                    ctx.pylock.decrypt_directory(path, password, output)
-                    if path.is_dir()
-                    else ctx.pylock.decrypt_file(path, password, output)
+            if path.is_dir():
+                result = ctx.pylock.decrypt_directory(
+                    path=path,
+                    passphrase=passphrase,
+                    cipher=cipher,
+                    output_path=output,
                 )
             else:
-                result = ctx.pylock.decrypt_file(path, password, output)
+                result = ctx.pylock.decrypt_file(
+                    path=path,
+                    passphrase=passphrase,
+                    cipher=cipher,
+                    output_path=output,
+                )
 
             progress.update(task, description="Verifying integrity...")
 
         if not ctx.quiet:
-            output_path = output or str(path).replace(".locked", "")
+            output_path = result[0]
             console.print("\n[success]✓ Decryption successful![/success]")
             console.print(f"[dim]Output:[/dim] [highlight]{output_path}[/highlight]")
 
+            info_table = Table(box=box.SIMPLE, show_header=False)
+            if path.is_file():
+                info_table.add_row(
+                    "File size",
+                    f"{os.path.getsize(Path(output_path).absolute().as_posix()):,} bytes",
+                )
+            info_table.add_row(
+                "File count",
+                f"{result[1]} {'files' if result[1] > 1 else 'file'}",
+            )
     except Exception as e:
         console.print(f"\n[error]✗ Decryption failed:[/error] {str(e)}")
-        if "Invalid password" in str(e) or "decryption failed" in str(e).lower():
+        if "Invalid passphrase" in str(e) or "decryption failed" in str(e).lower():
             console.print(
-                "[warning]Hint: Verify your password or try a different cipher[/warning]"
+                "[warning]Hint: Verify your passphrase or try a different cipher[/warning]"
             )
         if ctx.verbose:
             console.print_exception()
@@ -529,7 +500,7 @@ def _brute_force_decrypt(ctx, path: Path, wordlist: Path) -> Optional[str]:
             try:
                 # Quick test decryption
                 ctx.pylock.test_decrypt(path, pwd)
-                console.print(f"[success]✓ Password found![/success]")
+                console.print("[success]✓ Password found![/success]")
                 return pwd
             except Exception:
                 continue

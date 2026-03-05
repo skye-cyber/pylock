@@ -2,24 +2,20 @@
 Implementation of the core cnryption logic
 """
 
-import os
 import json
 import hmac
 import struct
 import base64
 import hashlib
 from pathlib import Path
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from .exceptions import PyLockError, KeyError, ValidationError
 from .interfaces import PyLockInterface, CipherInterface
-from ..config.model import ConfigModel
+from .models import Ciphers
+from ..ciphers.factory import CipherFactory
+from .key_manager import KeyManager
 
 
-class BaseEncryptor(PyLockInterface):
+class BaseEncryptor(PyLockInterface, KeyManager):
     """
     Concrete implementation of SuiteInterface with metadata header/footer support.
 
@@ -34,13 +30,6 @@ class BaseEncryptor(PyLockInterface):
     def __init__(self, *args, **kwargs):
         self._metadata_buffer = None
 
-    @property
-    def random_enc_key() -> str:
-        """
-        Generate Random encryption key
-        """
-        return Fernet.generate_key().decode()
-
     def save_keyfile(self, key, path: Path) -> None:
         """Save encryption key to file."""
         path = Path(path)
@@ -51,24 +40,6 @@ class BaseEncryptor(PyLockInterface):
 
         with open(path, "w") as f:
             f.write(key)
-
-    @staticmethod
-    def generate_enc_key(
-        self, passphrase: str, salt: str = ConfigModel.DEFAULTSALT
-    ) -> bytes:
-        try:
-            salt = salt.encode()  # Convert to bytes
-            kdf = PBKDF2HMAC(
-                algorithm=hashes.SHA512(),
-                length=32,
-                salt=salt,
-                iterations=1_000_000,
-                backend=default_backend(),
-            )
-            key = base64.urlsafe_b64encode(kdf.derive(passphrase.encode()))
-            return key  # key.decode('ascii')
-        except Exception as e:
-            raise PyLockError(e)
 
     def write_metadata(self, data: str | bytes) -> None:
         """
@@ -112,10 +83,11 @@ class BaseEncryptor(PyLockInterface):
                 )
 
         json_bytes = json.dumps(metadata, separators=(",", ":")).encode("utf-8")
-        header_len = len(json_bytes)
 
-        # Structure: MAGIC(4) + VERSION(1) + LENGTH(4) + JSON(N)
-        header = struct.pack(">4sBI", self.MAGIC, self.VERSION, header_len) + json_bytes
+        # Build binary header
+        header = (
+            struct.pack(">4sBI", self.MAGIC, self.VERSION, len(json_bytes)) + json_bytes
+        )
 
         return header
 
@@ -155,34 +127,65 @@ class BaseEncryptor(PyLockInterface):
 
         Returns:
             dict: Contains 'cipher', 'version', 'key_id', 'timestamp', etc.
-                  Returns empty dict if file is not encrypted or corrupted.
+                Returns empty dict if file is not encrypted or corrupted.
         """
         path = Path(path)
 
-        if not path.exists() or path.stat().st_size < 9:  # Minimum header size
+        if (
+            not path.exists() or path.stat().st_size < 12
+        ):  # Minimum size for Base64 header
             return {}
 
         with open(path, "rb") as f:
-            # Read magic (4) + version (1) + length (4) = 9 bytes minimum
-            header_prefix = f.read(9)
+            # Read enough for potential Base64 header (could be larger than binary header)
+            # Since Base64 expands data by ~33%, we need to read more
+            # Let's read up to 1024 bytes to ensure we capture the full header
+            raw_data = f.read(1024)
 
-            if len(header_prefix) < 9:
+            try:
+                # Decode the Base64 data
+                decoded_data = base64.b64decode(raw_data)
+            except base64.binascii.Error:
+                # Not valid Base64 - might be unencrypted file or corrupted
                 return {}
 
-            magic, version, json_len = struct.unpack(">4sBI", header_prefix)
+            # Check if we have enough data for header
+            if (
+                len(decoded_data) < 9
+            ):  # Minimum header size (magic 4 + version 1 + length 4)
+                return {}
+
+            # Extract binary header
+            magic, version, json_len = struct.unpack(">4sBI", decoded_data[:9])
 
             if magic != self.MAGIC:
                 return {}
 
-            # Read the JSON metadata
-            json_bytes = f.read(json_len)
+            # Ensure we have the full JSON data
+            if len(decoded_data) < 9 + json_len:
+                # Try to read more if needed
+                f.seek(len(raw_data))
+                additional_data = f.read(json_len - (len(decoded_data) - 9))
+                if additional_data:
+                    try:
+                        decoded_more = base64.b64decode(additional_data)
+                        decoded_data += decoded_more
+                    except base64.binascii.Error:
+                        return {}
 
-            if len(json_bytes) < json_len:
+            if len(decoded_data) < 9 + json_len:
                 return {}
+
+            # Extract JSON data
+            json_bytes = decoded_data[9 : 9 + json_len]
 
             try:
                 metadata = json.loads(json_bytes.decode("utf-8"))
-                metadata["_header_size"] = 9 + json_len  # Useful for decryption offset
+                # Calculate header size including Base64 encoding overhead
+                original_header_size = 9 + json_len
+                metadata["_header_size"] = len(
+                    base64.b64encode(decoded_data[:original_header_size])
+                )
                 metadata["_is_encrypted"] = True
                 return metadata
             except (json.JSONDecodeError, UnicodeDecodeError):
@@ -192,22 +195,43 @@ class BaseEncryptor(PyLockInterface):
         """
         Quick check if a file was encrypted by this suite.
 
-        Simply checks for magic bytes at file start - fast and efficient.
+        Handles both raw binary and Base64-encoded formats.
         """
         path = Path(path)
 
-        if not path.exists() or path.stat().st_size < 4:
+        if not path.exists() or path.stat().st_size < 8:  # Minimum for Base64 header
             return False
 
         with open(path, "rb") as f:
-            magic = f.read(4)
-            return magic == self.MAGIC
+            # Read enough to potentially contain the magic bytes after Base64 decode
+            # Base64 of 4 bytes is 8 characters, plus some buffer
+            raw_data = f.read(8)  # Read a reasonable chunk
+
+            try:
+                # Try to decode as Base64 first (since your format encodes everything)
+                decoded = base64.b64decode(raw_data)
+
+                # Check if decoded data starts with magic bytes
+                if len(decoded) >= 4 and decoded[:4] == self.MAGIC:
+                    return True
+
+            except base64.binascii.Error:
+                # Not valid Base64 - might be raw binary or unencrypted
+                pass
+
+            # If Base64 decode failed, check if raw data starts with magic
+            # (for backward compatibility or raw binary format)
+            if len(raw_data) >= 4 and raw_data[:4] == self.MAGIC:
+                return True
+
+        return False
 
     def write_file(self, path: Path, data: str, mode: str = "w"):
         """
         Write file with optional metadata header.
         If metadata was set via write_metadata(), includes it in header.
         """
+
         if path.exists():
             raise PyLockError(f"File Exists at {path}")
 
@@ -222,7 +246,7 @@ class BaseEncryptor(PyLockInterface):
                 data = data.decode("utf-8")
 
         with open(path, mode) as f:
-            f.write(data)
+            f.write(data)  # f.write(base64.b64decode(ciphertext))
 
         # Clear metadata buffer after use
         self._metadata_buffer = None
@@ -233,27 +257,30 @@ class BaseEncryptor(PyLockInterface):
         """Read file, detecting and handling encrypted files."""
         path = Path(path)
 
-        if path.exists():
+        if not path.exists():
             raise PyLockError(f"File Not Found at {path}")
 
-        if self.is_encrypted(path):
-            # Read and strip header for raw content access
-            with open(path, "rb") as f:
-                data = f.read()
-
-            # Skip header to get ciphertext
-            _, _, json_len = struct.unpack(">4sBI", data[:9])
-            ciphertext = data[9 + json_len :]
-
-            # Return as string (base64 encoded ciphertext)
-            return base64.b64encode(ciphertext).decode("ascii")
+        # if self.is_encrypted(path):
+        #     # Read and strip header for raw content access
+        #     with open(path, "r") as f:
+        #         data = f.read()
+        #
+        #     # Skip header to get ciphertext
+        #     _, _, json_len = struct.unpack(">4sBI", data[:9])
+        #     ciphertext = data[9 + json_len :]
+        #
+        #     # Return as string (base64 encoded ciphertext)
+        #     return base64.b64encode(ciphertext).decode("ascii")
 
         # Regular file read
         with open(path, "r", encoding="utf-8") as f:
             return f.read()
 
     def encrypt(
-        self, data: str | bytes, key: str | bytes, cipher: CipherInterface = Fernet
+        self,
+        data: str | bytes,
+        key: str | bytes,
+        cipher: CipherInterface = Ciphers.AES256GCMCipher,
     ) -> str:
         """
         Encrypt data and return ciphertext with metadata header prepended.
@@ -282,12 +309,15 @@ class BaseEncryptor(PyLockInterface):
 
         # Clear metadata buffer after use
         self._metadata_buffer = None
-
         # Return as base64 string for text safety, or handle as needed
         return base64.b64encode(combined).decode("ascii")
 
     def decrypt(
-        self, data: str | bytes, key: str | bytes, cipher: CipherInterface = Fernet
+        self,
+        data: str | bytes,
+        key: str | bytes,
+        info,
+        cipher: CipherInterface = Ciphers.AES256GCMCipher,
     ) -> str:
         """
         Decrypt data, automatically stripping the metadata header.
@@ -297,68 +327,119 @@ class BaseEncryptor(PyLockInterface):
         if not key:
             raise KeyError("Missing decryption key")
 
-        # Decode from base64 if necessary
+        # STEP 1: Convert input to binary data
         if isinstance(data, str):
-            data = base64.b64decode(data.encode("ascii"))
+            # Data is a Base64 string (header + nonce + ciphertext)
+            binary_data = base64.b64decode(data.encode("ascii"))
+        else:
+            # Data is bytes - might be Base64 or raw
+            try:
+                binary_data = base64.b64decode(data)
+            except base64.binascii.Error:
+                binary_data = data
 
-        # Parse and strip header
-        if len(data) < 9:
-            raise ValueError("Data too short to contain valid header")
+        # STEP 2: Extract header and ciphertext (which includes nonce)
+        binary_header_size = info.get("_header_size", 0)
 
-        magic, version, json_len = struct.unpack(">4sBI", data[:9])
+        if binary_header_size == 0 or len(binary_data) < binary_header_size:
+            raise PyLockError(f"Invalid header size: {binary_header_size}")
 
-        if magic != self.MAGIC:
-            raise ValueError("Invalid magic bytes - not an encrypted file")
+        # This contains: nonce(12) + actual ciphertext
+        ciphertext_with_nonce = binary_data[binary_header_size:]
 
-        header_size = 9 + json_len
-        metadata = json.loads(data[9:header_size].decode("utf-8"))
-        ciphertext = data[header_size:]
+        print(f"Header size: {binary_header_size}")
+        print(f"Total binary data: {len(binary_data)}")
+        print(f"Ciphertext with nonce: {len(ciphertext_with_nonce)} bytes")
+        print(
+            f"Nonce should be first 12 bytes, then {len(ciphertext_with_nonce) - 12} bytes ciphertext"
+        )
 
-        # Verify cipher matches (optional safety check)
-        expected_cipher = self._get_cipher_name(cipher)
-        if metadata.get("cipher") != expected_cipher:
-            # Could warn or raise here depending on strictness needs
-            pass
+        # STEP 3: Get the correct cipher from metadata if specified
+        expected_cipher_name = info.get("cipher")
+        if expected_cipher_name:
+            expected_cipher = CipherFactory.CIPHERS.get(expected_cipher_name)
+            if expected_cipher and cipher != expected_cipher:
+                cipher = expected_cipher
+                print(f"Using cipher from metadata: {expected_cipher_name}")
 
-        # Decrypt the actual content
-        return self._perform_decryption(ciphertext, key, cipher)
+        # STEP 4: Decrypt - pass the bytes with nonce+ciphertext
+        try:
+            decrypted_data = self._perform_decryption(
+                ciphertext_with_nonce, key, cipher
+            )
+        except Exception as e:
+            raise PyLockError(e.__str__())
 
-    def _perform_encryption(self, data: str, key: bytes, cipher=Fernet) -> bytes:
+        if not decrypted_data:
+            raise PyLockError("Could not decrypt data: Invalid key")
+
+        print(f"Decrypted data length: {len(decrypted_data)} characters")
+        return decrypted_data
+
+    def _perform_encryption(
+        self, data: str | bytes, key: bytes, cipher: Ciphers.AES256GCMCipher
+    ) -> bytes:
         """
         Actual encryption implementation.
-        Placeholder - integrate with your specific cipher logic.
+
+        Args:
+            data: Data to encrypt (str or bytes)
+            key: Encryption key as bytes
+            cipher_class: Cipher class to instantiate
+
+        Returns:
+            Raw bytes containing (nonce + ciphertext + tag)
         """
-        if isinstance(key, str):
-            key = key.decode("ascii")
+        if not cipher or not callable(cipher):
+            raise ValidationError(f"Unsupported cipher: {cipher}")
 
-        if cipher and callable(cipher):
-            f = cipher(key)
-            return f.encrypt(data.encode("utf-8") if isinstance(data, str) else data)
+        # Create cipher instance with the key
+        f = cipher(key=key)
 
-        # Example with AES-GCM
-        elif cipher == "aes-gcm" or str(cipher).lower() == "aes-gcm":
-            aesgcm = AESGCM(key[:32])  # Use first 32 bytes
-            nonce = os.urandom(12)
-            ciphertext = aesgcm.encrypt(nonce, data.encode("utf-8"), None)
-            return nonce + ciphertext
+        # Encrypt - cipher.encrypt() returns Base64 string (per interface)
+        encrypted_b64 = f.encrypt(data)
 
-        raise ValueError(f"Unsupported cipher: {cipher}")
+        # Convert Base64 to raw bytes for combining with header
+        return f._b64decode(encrypted_b64)
 
-    def _perform_decryption(self, data: bytes, key: str | bytes, cipher: Fernet) -> str:
-        """Actual decryption implementation."""
+    def _perform_decryption(
+        self, data: bytes, key: str | bytes, cipher: Ciphers.AES256GCMCipher
+    ) -> str:
+        """
+        Actual decryption implementation.
+
+        Args:
+            data: Raw bytes containing (nonce + ciphertext + tag)
+            key: Decryption key as bytes
+            cipher_class: Cipher class to instantiate
+
+        Returns:
+            Decrypted string
+        """
+        # Normalize key to bytes
         if isinstance(key, str):
             key = key.encode("utf-8")
 
-        if cipher and callable(cipher):
-            f = cipher(key)
-            return f.decrypt(data).decode("utf-8")
+        if not cipher or not callable(cipher):
+            raise ValidationError(f"Unsupported cipher: {cipher}")
 
-        elif cipher == "aes-gcm" or str(cipher).lower() == "aes-gcm":
-            aesgcm = AESGCM(key[:32])
-            nonce, ciphertext = data[:12], data[12:]
-            return aesgcm.decrypt(nonce, ciphertext, None).decode("utf-8")
+        # Create cipher instance
+        f = cipher(key)
 
-        raise ValueError(f"Unsupported cipher: {cipher}")
+        # The cipher's decrypt method expects either:
+        # - Base64 string, or
+        # - Bytes containing (nonce + ciphertext)
+        # And returns a decoded string
+
+        # Since we already have bytes with nonce+ciphertext,
+        # we can pass it directly
+        # decrypted = f.decrypt(data)  # data is bytes with nonce + ciphertext
+
+        # Convert raw bytes to Base64 string (what cipher.decrypt expects)
+        data_b64 = f._b64encode(data)
+
+        # Decrypt - cipher.decrypt() returns string directly
+        return f.decrypt(data_b64)
 
     def _get_cipher_name(self, cipher) -> str:
         """Extract cipher identifier from cipher object/type."""
@@ -372,6 +453,7 @@ class BaseEncryptor(PyLockInterface):
         """Guess appropriate cipher from metadata or defaults."""
         if info and "cipher" in info:
             return info["cipher"]
-        return "fernet"  # Default
+        return "aes-256-gcm"  # Default
 
-    def get_cipher_byname(self, name: str) -> CipherInterface: ...
+    def get_cipher_byname(self, name: str) -> CipherInterface:
+        return CipherFactory.CIPHERS.get(name, None)

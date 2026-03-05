@@ -4,6 +4,7 @@ from ..core.interfaces import CipherInterface
 from .rsa import RSACipher
 from .ase256gsm import AES256GCMCipher
 from ..core.models import StrBytes
+from ..core.exceptions import TypeError, PyLockError
 
 
 class HybridRSAAESCipher(CipherInterface):
@@ -20,10 +21,17 @@ class HybridRSAAESCipher(CipherInterface):
 
     def is_data_compatible(self, data: StrBytes) -> bool:
         """Hybrid accepts any string (AES handles bulk, RSA handles key)."""
-        return isinstance(data, str)
+        return isinstance(data, str, bytes)
 
-    def encrypt(self, data: str) -> str:
+    def encrypt(self, data: StrBytes) -> str:
         """Generate random AES key, encrypt data with AES, encrypt key with RSA."""
+        if not self.is_data_compatible(data):
+            raise TypeError(
+                f"Hybrid-RSA-AES expects str,bytes got {type(data).__name__}",
+                "data",
+                type(data),
+            )
+
         # Generate ephemeral AES key
         aes_key = os.urandom(32)
         aes = AES256GCMCipher(key=aes_key)
@@ -38,7 +46,7 @@ class HybridRSAAESCipher(CipherInterface):
         combined = f"{encrypted_key}:{encrypted_data}"
         return self._b64encode(combined.encode("utf-8"))
 
-    def decrypt(self, data: str) -> str:
+    def decrypt(self, data: StrBytes) -> str:
         """Decrypt AES key with RSA, then decrypt data with AES."""
         try:
             combined = self._b64decode(data).decode("utf-8")
@@ -52,4 +60,4 @@ class HybridRSAAESCipher(CipherInterface):
             aes = AES256GCMCipher(key=aes_key)
             return aes.decrypt(encrypted_data)
         except Exception as e:
-            raise ValueError(f"Hybrid decryption failed: {e}")
+            raise PyLockError(f"Hybrid decryption failed: {e}")

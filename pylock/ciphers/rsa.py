@@ -3,6 +3,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from ..core.interfaces import CipherInterface
 from ..core.models import StrBytes
+from ..core.exceptions import PyLockError, ValidationError
 
 
 class RSACipher(CipherInterface):
@@ -49,21 +50,21 @@ class RSACipher(CipherInterface):
         if not isinstance(data, (str, bytes)):
             return False
 
-        data_len = len(data) if isinstance(data, str) else len(data)
+        data_len = len(data)  # if isinstance(data, str) else len(data)
         return data_len <= self.max_data_size
 
     def encrypt(self, data: str) -> str:
         """Encrypt with public key."""
         if not self.is_data_compatible(data):
-            raise ValueError(
-                f"RSA-{self.key_size} can only encrypt {self.max_data_size} bytes, "
+            raise ValidationError(
+                f"RSA-{self.key_size} can only encrypt {self.max_data_size} bytes/str, "
                 f"got {len(data)}"
             )
 
         if self.public_key is None:
-            raise ValueError("No public key available for encryption")
+            raise ValidationError("No public key available for encryption")
 
-        plaintext = data.encode("utf-8")
+        plaintext = data.encode("utf-8") if isinstance(data, str) else data
         ciphertext = self.public_key.encrypt(
             plaintext,
             padding.OAEP(
@@ -77,7 +78,7 @@ class RSACipher(CipherInterface):
     def decrypt(self, data: str) -> str:
         """Decrypt with private key."""
         if self.private_key is None:
-            raise ValueError("No private key available for decryption")
+            raise ValidationError("No private key available for decryption")
 
         try:
             ciphertext = self._b64decode(data)
@@ -91,7 +92,7 @@ class RSACipher(CipherInterface):
             )
             return plaintext.decode("utf-8")
         except Exception as e:
-            raise ValueError(f"RSA decryption failed: {e}")
+            raise PyLockError(f"RSA decryption failed: {e}")
 
     def export_public_key(self) -> str:
         """Export public key as PEM string."""
