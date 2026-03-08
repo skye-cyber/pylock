@@ -24,13 +24,13 @@
 ## ✨ Features
 
 - 🎨 **Beautiful Interface** — Rich terminal output with progress bars, tables, and colors
-- 🔒 **Modern Cryptography** — AES-256-GCM, ChaCha20-Poly1305, RSA-OAEP, and more
+- 🔒 **Modern Cryptography** — AES-256-GCM, ChaCha20-Poly1305, Fernet (RSA and Hybrid under development)
 - 📁 **File & Folder Support** — Encrypt individual files or entire directories
 - 🗝️ **Smart Key Management** — Automatic key generation with secure storage
 - 🔍 **Metadata Preservation** — Store encryption info for seamless decryption
 - 🛡️ **Process Locking** — Prevent concurrent operations from corrupting data
-- 🎓 **Educational Ciphers** — Classical ciphers (Caesar, Vigenère, Playfair) for learning
-- ⚡ **High Performance** — Hybrid encryption for large files, streaming support
+- 📂 **Binary File Support** — Handle text and binary files (images, PDFs, videos)
+- ⚡ **High Performance** — Efficient encryption/decryption for large files
 
 ---
 
@@ -55,6 +55,13 @@ pip install -e .
 ```bash
 pip install -e ".[dev]"
 ```
+
+### Requirements
+
+- Python 3.8+
+- cryptography library
+- click and rich for CLI
+- base64 for binary data handling
 
 ---
 
@@ -166,19 +173,21 @@ pylock interactive
 
 ## 🔐 Available Ciphers
 
-| Cipher | Security | Type | Best For |
-|--------|----------|------|----------|
-| `aes-256-gcm` | 🔒 Modern (Recommended) | Symmetric | General purpose, hardware accelerated |
-| `chacha20-poly1305` | 🔒 Modern | Symmetric | Mobile/ARM devices, software-only |
-| `fernet` | 🔒 Modern | Symmetric | Simple password-based encryption |
-| `rsa-oaep` | 🔒 Modern | Asymmetric | Key exchange, small data (<190 bytes) |
-| `hybrid-rsa-aes` | 🔒 Modern | Hybrid | Large files with asymmetric keys |
-| `caesar` | ⚠️ Classical | Substitution | Educational only |
-| `vigenere` | ⚠️ Classical | Polyalphabetic | Educational only |
-| `playfair` | ⚠️ Classical | Digraph | Educational only |
-| `morse` | ⚠️ Encoding | Encoding | Text encoding, educational |
+| Cipher | Security | Type | Best For | Status |
+|--------|----------|------|----------|--------|
+| `aes-256-gcm` | 🔒 Modern (Recommended) | Symmetric | General purpose, hardware accelerated | ✅ Working |
+| `chacha20-poly1305` | 🔒 Modern | Symmetric | Mobile/ARM devices, software-only | ✅ Working |
+| `fernet` | 🔒 Modern | Symmetric | Simple password-based encryption | ✅ Working |
+| `rsa-oaep` | 🔒 Modern | Asymmetric | Key exchange, small data (<190 bytes) | ⚠️ Needs Fix |
+| `hybrid-rsa-aes` | 🔒 Modern | Hybrid | Large files with asymmetric keys | ⚠️ Needs Fix |
+| `caesar` | ⚠️ Classical | Substitution | Educational only | ❌ Deprecated |
+| `vigenere` | ⚠️ Classical | Polyalphabetic | Educational only | ❌ Deprecated |
+| `playfair` | ⚠️ Classical | Digraph | Educational only | ❌ Deprecated |
+| `morse` | ⚠️ Encoding | Encoding | Text encoding, educational | ❌ Deprecated |
 
-> ⚠️ **Warning:** Classical ciphers (Caesar, Vigenère, Playfair) are cryptographically broken and provided for educational purposes only. Do not use for sensitive data.
+> ⚠️ **Warning:** Classical ciphers are deprecated and will be replaced with modern alternatives in future versions.
+
+> 🔧 **Note:** RSA and Hybrid-RSA-AES ciphers are currently under development and may not work correctly in this version.
 
 ---
 
@@ -193,11 +202,12 @@ pylock encrypt secrets.txt
 # ChaCha20-Poly1305 (better for mobile)
 pylock encrypt mobile-data.zip -c chacha20
 
-# RSA (for small files or key wrapping)
-pylock encrypt api-key.txt -c rsa-oaep
+# Fernet (simple password-based)
+pylock encrypt document.pdf -c fernet
 
-# Hybrid (RSA + AES for large files)
-pylock encrypt database.sql -c hybrid-rsa-aes
+# RSA and Hybrid-RSA-AES are currently under development
+# pylock encrypt api-key.txt -c rsa-oaep
+# pylock encrypt database.sql -c hybrid-rsa-aes
 ```
 
 ### Batch Encryption
@@ -237,17 +247,23 @@ pylock decrypt unknown.locked --brute-force --wordlist passwords.txt
 ```
 PyLock/
 ├── pylock/
-│   ├── cli.py              # Click + Rich interface
+│   ├── cli/               # Click + Rich CLI interface
+│   │   ├── cli.py          # Main CLI entry point
+│   │   └── utils.py        # CLI utilities
 │   ├── core/
 │   │   ├── pylock.py       # Core encryption engine
+│   │   ├── pylockmanager.py # File/directory processing
 │   │   ├── lock.py         # Process lock manager
-│   │   └── exceptions.py   # Custom exceptions
+│   │   ├── interfaces.py   # Interface definitions
+│   │   ├── exceptions.py   # Custom exceptions
+│   │   └── key_manager.py  # Key derivation
 │   ├── ciphers/
-│   │   ├── aes256gsm.py    # AES-256-GCM implementation
-│   │   ├── chacha20.py     # ChaCha20-Poly1305
-│   │   ├── rsa.py          # RSA-OAEP
-│   │   ├── hybridrsa_aes.py # Hybrid encryption
-│   │   ├── classical.py    # Caesar, Vigenère, Playfair
+│   │   ├── aes256gsm.py    # AES-256-GCM (✅ Working)
+│   │   ├── chacha20.py     # ChaCha20-Poly1305 (✅ Working)
+│   │   ├── fernet.py       # Fernet (✅ Working)
+│   │   ├── rsa.py          # RSA-OAEP (⚠️ Needs Fix)
+│   │   ├── hybridrsa_aes.py # Hybrid encryption (⚠️ Needs Fix)
+│   │   ├── classical.py    # Classical ciphers (❌ Deprecated)
 │   │   └── factory.py      # Cipher factory
 │   └── utils/
 │       ├── logging.py      # Rich logging
