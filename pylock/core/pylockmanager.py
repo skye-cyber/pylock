@@ -5,6 +5,7 @@ from pathlib import Path
 from .pylock import BaseEncryptor
 from .models import PyLockerAction
 from ..utils.file_utils import FileSystemHandler
+from ..utils.file_utils import generate_filename
 
 # from ..utils.decorators import decorators
 from .exceptions import UserError, ValidationError, SystemError
@@ -78,7 +79,7 @@ class PyLock(BaseEncryptor):
             _data = self.decrypt(data=data, key=key, cipher=cipher, info=info)
 
         else:
-            raise UserError("Invalid action provided")
+            raise UserError(f"Invalid action provided: {action}")
 
         self.write_file(output_path, _data, "wb")
         self.processed_items += 1
@@ -112,10 +113,18 @@ class PyLock(BaseEncryptor):
             return path, len(files)
 
     def get_enc_output_file(self, path: Path):
-        return path.absolute().parent / f"{path.name}.plocked"
+        file_path = path.absolute().parent / f"{path.name}.plocked"
+        suffix = ".plocked"
+        if file_path.exists():
+            file_path = generate_filename(path.absolute().parent, suffix=suffix)
+        return file_path
 
     def get_dec_output_file(self, path: Path):
-        return path.absolute().parent / f"{path.name}".strip(".plocked")
+        file_path = path.absolute().parent / f"{path.name}".strip(".plocked")
+        suffix = Path(path.absolute().as_posix().strip(".plocked")).suffix
+        if file_path.exists():
+            file_path = generate_filename(path.absolute().parent, suffix=suffix)
+        return file_path
 
     def encrypt_file(
         self,
@@ -131,6 +140,7 @@ class PyLock(BaseEncryptor):
             path=path,
             passphrase=passphrase,
             cipher=cipher,
+            compress=compress,
             output_path=output_path,
         )
 

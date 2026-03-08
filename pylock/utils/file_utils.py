@@ -37,14 +37,15 @@ def dirbuster(dir: str, suffixes: Union[List, Tuple]) -> list:
 
 
 def generate_filename(
-    basedir: Path, suffix: str, prefix: Optional[str], postfix: Optional[str] = "suite"
+    basedir: Path, suffix: str, postfix: Optional[str] = "suite"
 ) -> Path:
     """
     Generate Filename given its extension
     Args:
-        ext-> str
+        suffix-> str file extension
         basedir-> Path
-        postfix = str
+        postfix = str string preceding name
+        prefix - string before name
     Returns:
         path
     """
@@ -146,12 +147,13 @@ class FileSystemHandler:
             yield from Path(".").glob(pattern)
 
     @staticmethod
-    def delete_files(files: List[Path]) -> bool:
+    def delete_files(files: List[Path], verbose: bool = False) -> bool:
         try:
             for f in files:
                 if f.exists():
                     f.unlink()
-                    print(f"{OF.OK} Deleted: {f}")
+                    if verbose:
+                        print(f"{OF.OK} Deleted: {f}")
             return True
         except (PermissionError, OSError) as e:
             raise FileSystemError(e)

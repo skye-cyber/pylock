@@ -32,7 +32,7 @@ def print_ciphers_table():
         ("Caesar", "⚠️  Classical", "Educational only", "✗ Shift number"),
         ("Vigenère", "⚠️  Classical", "Educational only", "Keyword"),
         ("Playfair", "⚠️  Classical", "Educational only", "Keyword"),
-        ("Morse", "⚠️  Encoding", "Text encoding", "✗ None"),
+        # ("Morse", "⚠️  Encoding", "Text encoding", "✗ None"),
     ]
 
     for cipher, security, use_case, password in ciphers_info:

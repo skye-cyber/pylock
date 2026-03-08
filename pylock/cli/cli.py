@@ -4,7 +4,14 @@ from pathlib import Path
 import click
 from rich.panel import Panel
 from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
+    TimeRemainingColumn,
+)
 from typing import Optional
 from rich.prompt import Prompt
 from rich import box
@@ -12,12 +19,14 @@ from ..core.pylockmanager import PyLock
 from ..ciphers.factory import CipherFactory
 from .__shared__ import console  # , STYLES
 from .utils import print_ciphers_table, print_banner
+from ..utils.file_utils import FileSystemHandler
 
 
 # Custom Click context for sharing state
 class Context:
     def __init__(self):
         self.pylock = PyLock()
+        self.fs = FileSystemHandler()
         self.verbose = False
         self.quiet = False
 
@@ -120,15 +129,48 @@ def encrypt(ctx, path, cipher, passphrase, key_file, output, no_compress):
 
             # Perform encryption
             progress.update(task, description="Encrypting data...")
-
             if path.is_dir():
-                result = ctx.pylock.encrypt_directory(
-                    path=path,
-                    passphrase=passphrase,
-                    cipher=cipher,
-                    compress=not no_compress,
-                    output_path=output,
-                )
+                files = ctx.fs.collect_files(path.expanduser().absolute())
+                result = [path, len(files)]
+                try:
+                    progress.columns = [
+                        TextColumn("[progress.description]{task.description}"),
+                        BarColumn(),
+                        TaskProgressColumn(),
+                        TimeRemainingColumn(),
+                    ]
+                    encrypt_task = progress.add_task(
+                        description="", start=1, total=len(files)
+                    )
+                    for file in files:
+                        try:
+                            ctx.pylock.encrypt_file(
+                                path=Path(file),
+                                passphrase=passphrase,
+                                cipher=cipher,
+                                compress=not no_compress,
+                                output_path=output,
+                            )
+                            progress.update(task_id=encrypt_task, advance=1)
+                            os.unlink(Path(file).absolute().as_posix())
+                        except Exception:
+                            continue
+                    # Reset to spinner
+                    progress.update(encrypt_task, completed=len(files))
+                    progress.columns = [
+                        SpinnerColumn(),
+                        TextColumn("[progress.description]{task.description}"),
+                    ]
+                    # result = ctx.pylock.encrypt_directory(
+                    #     path=path,
+                    #     passphrase=passphrase,
+                    #     cipher=cipher,
+                    #     compress=not no_compress,
+                    #     output_path=output,
+                    # )
+                except Exception:
+                    if ctx.verbose:
+                        console.print_exception()
             else:
                 result = ctx.pylock.encrypt_file(
                     path=path,
@@ -137,6 +179,10 @@ def encrypt(ctx, path, cipher, passphrase, key_file, output, no_compress):
                     compress=not no_compress,
                     output_path=output,
                 )
+                try:
+                    os.unlink(path.absolute().as_posix())
+                except Exception:
+                    pass
 
             progress.update(task, description="Finalizing...")
 
@@ -264,12 +310,46 @@ def decrypt(ctx, path, passphrase, cipher, key_file, output, brute_force, wordli
             progress.update(task, description="Decrypting data...")
 
             if path.is_dir():
-                result = ctx.pylock.decrypt_directory(
-                    path=path,
-                    passphrase=passphrase,
-                    cipher=cipher,
-                    output_path=output,
-                )
+                files = ctx.fs.collect_files(path.expanduser().absolute())
+                result = [path, len(files)]
+                try:
+                    progress.columns = [
+                        TextColumn("[progress.description]{task.description}"),
+                        BarColumn(),
+                        TaskProgressColumn(),
+                        TimeRemainingColumn(),
+                    ]
+                    decrypt_task = progress.add_task(
+                        description="", start=1, total=len(files)
+                    )
+                    for file in files:
+                        try:
+                            ctx.pylock.decrypt_file(
+                                path=Path(file),
+                                passphrase=passphrase,
+                                cipher=cipher,
+                                output_path=output,
+                            )
+                            progress.advance(task_id=decrypt_task, advance=1)
+                            os.unlink(Path(file).absolute().as_posix())
+                        except Exception:
+                            continue
+
+                    progress.update(decrypt_task, completed=len(files))
+                    # Reset progress columns to SpinnerColumn
+                    progress.columns = [
+                        SpinnerColumn(),
+                        TextColumn("[progress.description]{task.description}"),
+                    ]
+                    # result = ctx.pylock.decrypt_directory(
+                    #     path=path,
+                    #     passphrase=passphrase,
+                    #     cipher=cipher,
+                    #     output_path=output,
+                    # )
+                except Exception:
+                    if ctx.verbose:
+                        console.print_exception()
             else:
                 result = ctx.pylock.decrypt_file(
                     path=path,
@@ -277,6 +357,10 @@ def decrypt(ctx, path, passphrase, cipher, key_file, output, brute_force, wordli
                     cipher=cipher,
                     output_path=output,
                 )
+                try:
+                    os.unlink(path.absolute().as_posix())
+                except Exception:
+                    pass
 
             progress.update(task, description="Verifying integrity...")
 
