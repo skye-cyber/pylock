@@ -28,9 +28,9 @@ setup(
     description=DESCRIPTION,
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/skye-cyber/pylock",
+    url="https://github.com/skye-cyber/PyLock",
     packages=find_packages(exclude=["tests", "docs", "build", "dist"]),
-    package_dir={"": ""},
+    # package_dir={"": ""},
     python_requires=">=3.8",
     install_requires=REQUIREMENTS,
     extras_require={
@@ -83,8 +83,8 @@ setup(
         "Typing :: Typed",
     ],
     project_urls={
-        "Bug Reports": "https://github.com/skye-cyber/pylock/issues",
-        "Source": "https://github.com/skye-cyber/pylock",
-        "Documentation": "https://github.com/skye-cyber/pylock/wiki",
+        "Bug Reports": "https://github.com/skye-cyber/PyLock/issues",
+        "Source": "https://github.com/skye-cyber/PyLock",
+        "Documentation": "https://github.com/skye-cyber/PyLock/wiki",
     },
 )

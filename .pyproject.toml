@@ -81,11 +81,11 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/skye-cyber/pylock"
-Documentation = "https://github.com/skye-cyber/pylock/wiki"
-Repository = "https://github.com/skye-cyber/pylock.git"
-"Bug Tracker" = "https://github.com/skye-cyber/pylock/issues"
-Changelog = "https://github.com/skye-cyber/pylock/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/skye-cyber/PyLock"
+Documentation = "https://github.com/skye-cyber/PyLock/wiki"
+Repository = "https://github.com/skye-cyber/PyLock.git"
+"Bug Tracker" = "https://github.com/skye-cyber/PyLock/issues"
+Changelog = "https://github.com/skye-cyber/PyLock/blob/main/CHANGELOG.md"
 
 [project.scripts]
 pylock = "pylock.cli:main"
