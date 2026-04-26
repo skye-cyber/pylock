@@ -83,8 +83,8 @@ setup(
         "Typing :: Typed",
     ],
     project_urls={
-        "Bug Reports": "https://github.com/skye-cyber/pylock/issues",
-        "Source": "https://github.com/skye-cyber/pylock",
-        "Documentation": "https://github.com/skye-cyber/pylock/wiki",
+        "Bug Reports": "https://github.com/skye-cyber/PyLock/issues",
+        "Source": "https://github.com/skye-cyber/PyLock",
+        "Documentation": "https://github.com/skye-cyber/PyLock/wiki",
     },
 )
