@@ -1,3 +1,0 @@
-#!/bin/bash
-ifconfig wlan0 | grep 192* | cut -d "n" -f 2 | tr -d "et "
-

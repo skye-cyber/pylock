@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 400">
+    <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#0b0e18"/>
+            <stop offset="100%" style="stop-color:#1a1f2f"/>
+        </linearGradient>
+        <linearGradient id="text" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#ffffff"/>
+            <stop offset="100%" style="stop-color:#c7e0ff"/>
+        </linearGradient>
+    </defs>
+    <!-- Background -->
+    <rect width="780" height="400" rx="60" fill="url(#bg)" stroke="rgba(90,150,255,0.2)" stroke-width="2"/>
+    <!-- Label -->
+    <rect x="40" y="30" width="180" height="36" rx="18" fill="rgba(45,85,255,0.12)" stroke="rgba(65,150,255,0.3)"/>
+    <text x="60" y="54" fill="#b5d0ff" font-size="14" font-weight="500">&#x1F512; PyLock &#xB7; v2.0.0</text>
+    <!-- Title -->
+    <text x="40" y="140" font-size="72" font-weight="800" fill="url(#text)">PyLock</text>
+    <rect x="340" y="105" width="100" height="40" rx="20" fill="#3776ab" stroke="#4b8bbd"/>
+    <text x="360" y="132" fill="#ffde57" font-size="16" font-weight="600">&#x1F40D; &#x26A1;</text>
+    <!-- Tagline -->
+    <text x="40" y="190" fill="#b6caf5" font-size="24">Python file encryption toolkit.</text>
+    <text x="40" y="220" fill="#95b5f0" font-size="16">authenticated &#xB7; simple &#xB7; battle-tested</text>
+    <!-- Features -->
+    <rect x="40" y="260" width="140" height="36" rx="18" fill="rgba(10,20,45,0.4)" stroke="rgba(90,160,255,0.15)"/>
+    <text x="55" y="284" fill="#d5e5ff" font-size="14">&#x1F510; AES-256-GCM</text>
+    <rect x="190" y="260" width="150" height="36" rx="18" fill="rgba(10,20,45,0.4)" stroke="rgba(90,160,255,0.15)"/>
+    <text x="205" y="284" fill="#d5e5ff" font-size="14">&#x1F4C1; multi-file glob</text>
+    <rect x="350" y="260" width="180" height="36" rx="18" fill="rgba(10,20,45,0.4)" stroke="rgba(90,160,255,0.15)"/>
+    <text x="365" y="284" fill="#d5e5ff" font-size="14">&#x2699;&#xFE0F; key derivation</text>
+    <rect x="540" y="260" width="140" height="36" rx="18" fill="rgba(10,20,45,0.4)" stroke="rgba(90,160,255,0.15)"/>
+    <text x="555" y="284" fill="#d5e5ff" font-size="14">&#x1F575;&#xFE0F; stealth mode</text>
+    <!-- CTA Button -->
+    <rect x="40" y="320" width="250" height="50" rx="25" fill="#1d3b70" stroke="#4171c7"/>
+    <text x="50" y="350" fill="white" font-size="18" font-weight="600">&#x1F511; pip install pylock</text>
+    <!-- Code snippet -->
+    <rect x="300" y="320" width="250" height="50" rx="25" fill="#0d1424" stroke="#3165b0"/>
+    <text x="310" y="350" fill="#c3ddff" font-family="monospace" font-size="14"><tspan fill="#ffcb6b">$</tspan> pylock encrypt secrets/</text>
+    <!-- OS labels -->
+    <text x="40" y="390" fill="#6279b0" font-size="12">&#x1F427; linux  &#xF8FF; macOS  &#x229E; windows &#xB7; 100% pure python</text>
+    <!-- Right side emblem -->
+    <text x="550" y="200" font-size="100" fill="#2580ff" opacity="0.9">&#x1F512;</text>
+    <text x="550" y="240" fill="#2f6fbb" font-family="monospace" font-size="14" font-weight="600">0100101 &#x21C6; 101001</text>
+</svg>
